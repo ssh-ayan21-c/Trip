@@ -21,7 +21,7 @@ from logic import tally_votes, decide_accused
 
 config.require_token()
 
-bot = telebot.TeleBot(config.BOT_TOKEN, parse_mode="HTML")
+bot = telebot.TeleBot(config.BOT_TOKEN, parse_mode="HTML", threaded=False)
 print(f"Bot identity: @{bot.get_me().username}", flush=True)
 app = Flask(__name__)
 
