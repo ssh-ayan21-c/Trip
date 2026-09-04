@@ -1103,6 +1103,11 @@ def healthz():
     return jsonify(status="ok")
 
 
+@app.get("/")
+def root():
+    return jsonify(service="chameleon-bot", status="ok")
+
+
 @app.post("/telegram/webhook")
 def telegram_webhook():
     expected_secret = config.WEBHOOK_SECRET
@@ -1110,7 +1115,13 @@ def telegram_webhook():
         abort(403)
     update = request.get_json(silent=True)
     if update:
-        bot.process_new_updates([types.Update.de_json(update)])
+        update_id = update.get("update_id", "unknown")
+        print(f"Received Telegram update {update_id}", flush=True)
+        try:
+            bot.process_new_updates([types.Update.de_json(update)])
+        except Exception:
+            app.logger.exception("Failed to process Telegram update %s", update_id)
+            raise
     return "", 200
 
 
