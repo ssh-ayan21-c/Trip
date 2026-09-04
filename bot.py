@@ -22,6 +22,7 @@ from logic import tally_votes, decide_accused
 config.require_token()
 
 bot = telebot.TeleBot(config.BOT_TOKEN, parse_mode="HTML")
+print(f"Bot identity: @{bot.get_me().username}", flush=True)
 app = Flask(__name__)
 
 # One lock guards all shared state below (polling can use multiple threads).
