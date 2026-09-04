@@ -8,7 +8,9 @@ NOTE: the '!hint' feature needs the bot's group privacy turned OFF in BotFather
 import html
 import random
 import threading
+import os
 
+from flask import Flask, abort, jsonify, request
 import telebot
 from telebot import types
 
@@ -20,6 +22,7 @@ from logic import tally_votes, decide_accused
 config.require_token()
 
 bot = telebot.TeleBot(config.BOT_TOKEN, parse_mode="HTML")
+app = Flask(__name__)
 
 # One lock guards all shared state below (polling can use multiple threads).
 LOCK = threading.RLock()
@@ -1095,7 +1098,46 @@ def detect_privacy():
         )
 
 
+@app.get("/healthz")
+def healthz():
+    return jsonify(status="ok")
+
+
+@app.post("/telegram/webhook")
+def telegram_webhook():
+    expected_secret = config.WEBHOOK_SECRET
+    if expected_secret and request.headers.get("X-Telegram-Bot-Api-Secret-Token") != expected_secret:
+        abort(403)
+    update = request.get_json(silent=True)
+    if update:
+        bot.process_new_updates([types.Update.de_json(update)])
+    return "", 200
+
+
+def configure_webhook():
+    if not config.RENDER_EXTERNAL_URL:
+        return False
+    if not config.WEBHOOK_SECRET:
+        raise SystemExit("WEBHOOK_SECRET is required when RENDER_EXTERNAL_URL is set.")
+    db.init_db()
+    detect_privacy()
+    setup_commands()
+    bot.set_webhook(
+        url=f"{config.RENDER_EXTERNAL_URL}/telegram/webhook",
+        secret_token=config.WEBHOOK_SECRET,
+        drop_pending_updates=True,
+    )
+    print("Chameleon bot webhook is configured.")
+    return True
+
+
+WEBHOOK_CONFIGURED = configure_webhook() if config.RENDER_EXTERNAL_URL else False
+
+
 def main():
+    if WEBHOOK_CONFIGURED:
+        app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "10000")))
+        return
     db.init_db()
     detect_privacy()
     setup_commands()

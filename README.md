@@ -50,7 +50,34 @@ works only while this process is running.
 
 ---
 
-## 3. Set up the bot in Telegram
+## 3. Deploy free on Render
+
+The bot automatically uses webhook mode when `RENDER_EXTERNAL_URL` is present.
+This allows it to run as a Render free Web Service instead of a paid background
+worker. Render free services can sleep, so Telegram updates may be delayed while
+the service wakes up.
+
+1. Create a **Web Service** on Render and connect this GitHub repository.
+2. Use these settings:
+
+   - Build command: `pip install -r requirements.txt`
+   - Start command: `gunicorn --bind 0.0.0.0:$PORT bot:app`
+
+3. Add these environment variables in Render:
+
+   - `BOT_TOKEN` - the token from BotFather.
+   - `DATABASE_URL` - the Neon PostgreSQL connection string.
+   - `SUPER_ADMINS` - comma-separated Telegram user IDs.
+   - `MIN_PLAYERS` - usually `3`.
+   - `WEBHOOK_SECRET` - a random value containing only letters, numbers, `_`, or `-`.
+
+Render automatically supplies `RENDER_EXTERNAL_URL`. On startup, the bot registers
+`https://your-service.onrender.com/telegram/webhook` with Telegram and exposes
+`/healthz` for the Render health check.
+
+---
+
+## 4. Set up the bot in Telegram
 
 1. In **@BotFather**, turn **Group Privacy OFF** so the bot can read the `!clue`
    hint messages players type during a round:
@@ -72,7 +99,7 @@ works only while this process is running.
 
 ---
 
-## 4. How to play
+## 5. How to play
 
 1. Someone sends `/start` in the group (or `/series` for a multi-game series).
 2. Everyone taps **Join / Leave** to join the lobby (default minimum 3 players).
@@ -140,7 +167,7 @@ During a round, give your clue by typing `!your clue` (or `/hint your clue`).
 
 ---
 
-## 5. Editing categories and words
+## 6. Editing categories and words
 
 Open `categories.py`. It is a plain dictionary of `"Category name": [list of words]`.
 Add, remove, or edit freely. Each game randomly picks one category and shows 12-15
@@ -153,32 +180,14 @@ and note these are deliberately kept out of the random category pool.
 
 ---
 
-## 6. Later: remote database + deployment
+## 7. Database notes
 
-You are currently using a local SQLite file (`chameleon_stats.db`) for stats. To
-move to a remote database and deploy the bot so it runs 24/7:
+The bot uses a local SQLite file (`chameleon_stats.db`) when `DATABASE_URL` is
+empty. For persistent hosted stats, set `DATABASE_URL` to a Neon PostgreSQL
+connection string. The `psycopg2-binary` dependency is already enabled, and the
+`stats` table is created automatically on startup.
 
-### Switch stats to a remote Postgres database
-
-1. Create a free Postgres database (e.g. on Neon, Supabase, or Railway) and copy
-   its connection string, which looks like:
-   `postgresql://user:password@host:5432/dbname`
-2. In `.env`, set `DATABASE_URL` to that string.
-3. Uncomment `psycopg2-binary` in `requirements.txt` and run
-   `pip install -r requirements.txt`.
-4. Restart the bot. `db.py` automatically uses Postgres when `DATABASE_URL` is set;
-   no other code changes are needed. The stats table is created on first run.
-
-### Deploy to run 24/7
-
-The simplest option is a service that runs a background worker:
-
-- **Railway / Render**: push this folder to a GitHub repo, create a new project
-  from it, add a service with start command `python bot.py`, and set the same
-  environment variables (`BOT_TOKEN`, `SUPER_ADMINS`, `DATABASE_URL`) in the
-  dashboard. On Railway you can add a Postgres plugin and it will provide
-  `DATABASE_URL` automatically.
-- The bot uses long polling, so it does **not** need a public web address.
+For local development, leave `DATABASE_URL` empty and SQLite will be used instead.
 
 ---
 

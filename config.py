@@ -22,6 +22,10 @@ SUPER_ADMINS = {
 # a remote database later (no code changes needed).
 DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 
+# Render provides this automatically for deployed web services.
+RENDER_EXTERNAL_URL = os.environ.get("RENDER_EXTERNAL_URL", "").strip().rstrip("/")
+WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "").strip()
+
 # Path to the local SQLite stats file (used only when DATABASE_URL is empty).
 STATS_DB = os.environ.get("STATS_DB", "chameleon_stats.db").strip()
 
